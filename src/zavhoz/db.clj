@@ -28,13 +28,14 @@
                        :encrypted :text
                        :keyphrase :text
                        :created_at :date)
-        (create-table! :file :path :text :alias :text :cron :text))))
+        (create-table! :file :path "text unique" :updated_at :date))))
 
 ;; TODO:
 ;; команда для сброса базы данных
 
 (comment
-  #_(io/delete-file db-path)
+  #_(do (io/delete-file db-path)
+        (init-db!))
   (t2/select :file)
   (t2/select :password)
   (t2/insert! :file {:path "/tmp"

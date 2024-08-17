@@ -22,7 +22,7 @@
    :version "1.0"
    :subcommands
    (concat zavhoz.password/commands
-           #_zavhoz.backup/commands)
+           zavhoz.backup/commands)
    })
 
 (defn -main
