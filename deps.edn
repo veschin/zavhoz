@@ -1,0 +1,21 @@
+{:paths   ["src" "resources"]
+ :deps    {org.clojure/clojure       {:mvn/version "1.11.1"}
+           cli-matic/cli-matic       {:mvn/version "0.5.4"}
+           org.clojure/java.jdbc     {:mvn/version "0.7.12"}
+           io.github.camsaul/toucan2 {:mvn/version "1.0.543"}
+           methodical/methodical     {:mvn/version "1.0.123"}
+           honeysql/honeysql         {:mvn/version "1.0.461"}
+           org.xerial/sqlite-jdbc    {:mvn/version "3.43.0.0"}
+           }
+ :aliases {:run-m {:main-opts ["-m" "zavhoz.zavhoz"]}
+           :run-x {:ns-default zavhoz.zavhoz
+                   :exec-fn    greet
+                   :exec-args  {:name "Clojure"}}
+           :build {:deps       {io.github.clojure/tools.build {:git/tag "v0.10.5" :git/sha "2a21b7a"}}
+                   :ns-default build}
+           :test  {:extra-paths ["test"]
+                   :extra-deps
+                   {org.clojure/test.check {:mvn/version "1.1.1"}
+                    io.github.cognitect-labs/test-runner
+                    {:git/tag "v0.5.1" :git/sha "dfb30dd"}}}
+           :neil  {:project {:name zavhoz/zavhoz}}}}
