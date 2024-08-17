@@ -1,7 +1,8 @@
 (ns zavhoz.password
   (:require [toucan2.core :as t2]
             [clojure.string :as str]
-            [zavhoz.crypt :as crypt]))
+            [zavhoz.crypt :as crypt]
+            [zavhoz.printing :as p]))
 
 
 ;; TODO
@@ -10,36 +11,17 @@
 ;;   - дата изменения
 ;;
 ;; добавить аргумент отключения pretty принтов
-(declare
- remove-password)
 
-(defn wrap! [message] (println (format "--\n%s\n--" message)))
-
-(defmacro try! [& body]
-  `(try ~@body
-        (catch Exception e#
-          (->> e#
-               ex-message
-               (format "Error: \n%s")
-               (wrap!)
-               ))))
-
-(defmacro print! [& body]
-  (let [p (fn [expr]
-            (if expr
-              (wrap! expr)
-              (wrap! "Nothing")))]
-    `(try! (~p (do ~@body)))))
 
 (defmacro with-authz! [bindings & body]
   `(do
-     (wrap! "Enter keyphrase")
-     (print!
+     (p/wrap! "Enter keyphrase")
+     (p/print!
        (when-let ~bindings
          ~@body))))
 
 (defn list-passwords [{_args :_arguments}]
-  (print!
+  (p/print!
     (some->> :password
              (t2/select-fn-vec (fn [pass]
                                  (format "'%s' created at %s"
@@ -108,7 +90,8 @@
                    :type   :string}
                   {:as     "Keyphrase"
                    :option "keyphrase*"
-                   :type   :string}]}
+                   :type   :string}]
+    :runs        update-password!}
    {:command     "pass-rm"
     :description "Remove password"
     :opts        [{:as     "name"
