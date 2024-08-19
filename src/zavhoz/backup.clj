@@ -1,10 +1,12 @@
 (ns zavhoz.backup
   (:require [clojure.java.io :as io]
             [zavhoz.printing :as p]
+            [zavhoz.zip :as zip]
             [toucan2.core :as t2]
-            [clojure.pprint :as pp]))
+            [clojure.string :as str]
+            ))
 
-;; TODO
+; TODO
 ;; - бэкап директорий и файлов
 ;;   - рекурсивные бэкапы
 ;;   - архивирование
@@ -15,8 +17,9 @@
       (io/file)
       (.getParent)))
 
-(declare commands
+(declare
          backup-zip!
+         backup-unzip!
          forget-files!
          restore-zip!
          )
@@ -50,6 +53,21 @@
 ;; но надо бы их завезти потом
 ;; TODO:
 ;; есть смысл перевести все хранение в gzip формат
+
+
+;; TODO: нужно переработать эту функцию
+(defn cp! [& [counter]]
+  (fn cp
+    ([from to] (cp from to (some-> from (io/file) file-seq)))
+    ([_from to file-seq]
+     (doseq [file  file-seq
+             :when (-> file .isDirectory not)]
+       (->> (io/make-parents)
+            (doto (io/file (str to "/" file)))
+            (io/copy (io/file file)))
+       (p/progress! (format "+ %s" (.getName file)))
+       (when counter (swap! counter inc))))))
+
 (defn mem-files! [{[path regex] :_arguments}]
   (let [path     (io/file path)
         dir?     (.isDirectory path)
@@ -63,13 +81,8 @@
                                 (filter #(re-matches (re-pattern regex) (.getName %)) files)
                                 files)
             counter           (atom 0)
-            cp!               (fn [from to]
-                                (->> (io/make-parents)
-                                     (doto (io/file (str to "/" from)))
-                                     (io/copy (io/file from))))
-            db-save!          (fn [] (let [date (-> "yyyy-MM-dd"
-                                                    (java.text.SimpleDateFormat.)
-                                                    (.format (java.util.Date.)))]
+            cp!               (cp! counter)
+            db-save!          (fn [] (let [date (simple-date)]
                                        (if (t2/exists? :file :path path-abs)
                                          (t2/query {:update :file
                                                     :set {:path path-abs :updated_at date}
@@ -77,11 +90,7 @@
                                          (t2/insert! :file {:path path-abs :updated_at date} ))))]
         (if dir?
           (do
-            (doseq [file  files-after-regex
-                    :when (-> file .isDirectory not)]
-              (cp! file backup-dir)
-              (println (format "+ %s" (.getName file)))
-              (swap! counter inc))
+            (cp! path backup-dir files-after-regex)
             (db-save!)
             (->> files-after-regex
                  (remove #(.isDirectory %))
@@ -136,18 +145,7 @@
                              (not-empty)
                              (count))
         counter     (atom 0)
-        rm!         (fn rm*
-                      [path]
-                      (when (.isDirectory (io/file path))
-                        (->> path (io/file) (.listFiles) (run! rm*)))
-                      (when (-> path (io/file) (.isDirectory) (not))
-                        (swap! counter inc)
-                        (->> path
-                             (io/file)
-                             (.getName)
-                             (format "- %s")
-                             (println)))
-                      (io/delete-file path))]
+        rm!         (rm! counter)]
     (p/wrap! (format "Forget '%s'" path))
     (p/with-agree!
       (when (and (-> path* io/file .exists)
@@ -252,8 +250,8 @@
                    :type   :string}
                   ;; TODO: регулярочки в некст релизе завезем
                   #_{:as     "Java regex"
-                   :option "regex"
-                   :type   :string}]
+                     :option "regex"
+                     :type   :string}]
     :runs        mem-files!}
    {:command     "mem-list"
     :description "Memoize list"
