@@ -1,7 +1,18 @@
 (ns zavhoz.printing
   (:require [clojure.pprint :as pp]))
 
-(defn wrap! [message] (println (format "--\n%s\n--" message)))
+(def supress? false)
+(def val? false)
+
+(defn wrap! [message]
+  (when-not supress?
+    (if val?
+      message
+      (println (format "--\n%s\n--" message)))))
+
+(defn progress! [message]
+  (when-not supress?
+    (println message)))
 
 (defmacro try! [& body]
   `(try ~@body
@@ -19,15 +30,16 @@
               (wrap! "Nothing")))]
     `(try! (~p (do ~@body)))))
 
-(def agree? true)
+(def agree? false)
 (defmacro with-agree! [& body]
   `(do
-     (when agree? (wrap! "You want to proceed?"))
+     (when-not agree? (wrap! "You want to proceed?"))
      (print!
-       (when (= "y" (read-line))
+       (when (= "y" (if agree? "y" (read-line)))
          (wrap! "Processing...")
          ~@body))))
 
 (defn table! [header seq*]
   (wrap! header)
-  (pp/print-table seq*))
+  (when-not supress?
+    (pp/print-table seq*)))
